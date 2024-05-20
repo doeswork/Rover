@@ -1,0 +1,65 @@
+import rclpy
+from rclpy.node import Node
+from std_msgs.msg import String
+import sys
+import select
+import tty
+import termios
+
+class KeyboardReader:
+    def __init__(self):
+        # Save the terminal settings
+        self.old_settings = termios.tcgetattr(sys.stdin)
+        tty.setcbreak(sys.stdin.fileno())
+
+    def read_key(self):
+        if select.select([sys.stdin], [], [], 0) == ([sys.stdin], [], []):
+            key = sys.stdin.read(1)
+            return key
+        return None
+
+    def restore_terminal(self):
+        termios.tcsetattr(sys.stdin, termios.TCSADRAIN, self.old_settings)
+
+class RoverControl(Node):
+    def __init__(self):
+        super().__init__('rover_control')
+        self.publisher_ = self.create_publisher(String, 'rover_command', 10)
+
+    def publish_command(self, command):
+        msg = String()
+        msg.data = command
+        self.publisher_.publish(msg)
+        self.get_logger().info(f"Publishing: {command}")
+
+def main(args=None):
+    rclpy.init(args=args)
+    rover_control = RoverControl()
+    keyboard_reader = KeyboardReader()
+
+    print("Control the rover with WASD keys, 'q' to quit")
+
+    try:
+        while rclpy.ok():
+            key = keyboard_reader.read_key()
+            if key is not None:
+                if key == 'w':
+                    rover_control.publish_command('F:1')
+                elif key == 's':
+                    rover_control.publish_command('B:1')
+                elif key == 'a':
+                    rover_control.publish_command('L:1')
+                elif key == 'd':
+                    rover_control.publish_command('R:1')
+                elif key == 'q':
+                    break
+    except Exception as e:
+        print(e)
+    finally:
+        keyboard_reader.restore_terminal()
+        rover_control.destroy_node()
+        rclpy.shutdown()
+
+if __name__ == '__main__':
+    main()
+

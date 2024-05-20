@@ -9,6 +9,14 @@ class RoverOutput(Node):
         super().__init__('rover_output')
         GPIO.setmode(GPIO.BCM)  # Set the GPIO pin numbering mode
 
+        self.subscription = self.create_subscription(
+            String,
+            'live_topic',
+            # 'stepper_motor_command',
+            self.command_callback,
+            10)
+        self.subscription
+
         self.servo_pin1 = 4  # Use a different pin for the servo
         GPIO.setup(self.servo_pin1, GPIO.OUT)
         self.servo1 = GPIO.PWM(self.servo_pin1, 50)  # 50Hz pulse for servo
@@ -29,32 +37,30 @@ class RoverOutput(Node):
         self.servo4 = GPIO.PWM(self.servo_pin4, 50)  # 50Hz pulse for servo
         self.servo4.start(0)  # Start servo in neutral position (usually 7.5 for continuous servos)
 
-        self.subscription = self.create_subscription(
-            String,
-            'stepper_motor_command',
-            self.command_callback,
-            10)
-
-        self.rotation_time_per_rotation = 2  # Time in seconds for one full rotation; adjust this based on your servo's performance
+        self.rotation_time_per_rotation = 1  # Time in seconds for one full rotation; adjust this based on your servo's performance
 
     def command_callback(self, msg):
         command = msg.data
         self.get_logger().info(f'Received command: {command}')
-        if command.startswith('F'):
+        if command.startswith('w'): # F
             parts = command.split(':')
-            rotations = int(parts[1])
+            rotations = 1 
+            # rotations = int(parts[1])
             self.spin_servo_forward(rotations)
-        elif command.startswith('B'):
+        elif command.startswith('s'): # B
             parts = command.split(':')
-            rotations = int(parts[1])
+            # rotations = int(parts[1])
+            rotations = 1 
             self.spin_servo_backward(rotations)
-        elif command.startswith('L'):
+        elif command.startswith('a'): # L
             parts = command.split(':')
-            rotations = int(parts[1])
+            # rotations = int(parts[1])
+            rotations = 1 
             self.spin_servo_left(rotations)
-        elif command.startswith('R'):
+        elif command.startswith('d'): # R
             parts = command.split(':')
-            rotations = int(parts[1])
+            # rotations = int(parts[1])
+            rotations = 1 
             self.spin_servo_right(rotations)
         else:
             self.get_logger().info("Invalid Action")
